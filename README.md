@@ -8,6 +8,24 @@ An end-to-end Machine Learning project that predicts customer churn using the Te
 
 Predict whether a telecom customer is likely to churn based on demographic, account, and service usage information.
 
+## Table of Contents
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Models](#models)
+- [Evaluation Metrics](#evaluation-metrics)
+- [Dataset](#dataset)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Run](#run)
+- [Output](#output)
+- [Results](#results)
+- [Key Insights](#key-insights)
+- [Best Performing Model](#best-performing-model)
+- [Notes](#notes)
+- [Requirements](#requirements)
+- [Future Improvements](#future-improvements)
+- [License](#license)
+
 ## Features
 
 - Data cleaning and preprocessing
@@ -110,11 +128,22 @@ The project generates:
 
 ## Results
 
-### ROC Curve
-![ROC Curve](Plots/Tuned%20Models%20Handling%20Balanced%20Class/12_roc_curve_tuned_models.png)
+### Final Tuned Model Performance
 
-### Confusion Matrix
-![Confusion Matrix](Plots/Tuned%20Models%20Handling%20Balanced%20Class/13_confusion_matrix_tuned_models.png)
+| Model                | Accuracy | Precision | Recall | F1     | ROC-AUC |
+|----------------------|----------|-----------|--------|--------|---------|
+| Logistic Regression  | 0.787    | 0.583     | 0.698  | 0.635  | 0.838   |
+| LightGBM Classifier  | 0.757    | 0.529     | 0.773  | 0.628  | 0.834   |
+| CatBoost Classifier  | 0.762    | 0.536     | 0.773  | 0.633  | 0.839   |
+
+*(metrics computed on a held-out test set, using per-model thresholds tuned for F1 on a separate validation split)*
+
+## Key Insights
+
+- **SMOTE on one-hot encoded categorical data degrades model quality.** Generating synthetic minority samples in encoded categorical space produces fractional values that don't correspond to any real customer (e.g. 0.4 of a contract type), inflating false positives. Switching to native class weighting (`class_weight='balanced'`, `scale_pos_weight`, `auto_class_weights='Balanced'`) fixed this without fabricating data.
+- **Threshold tuning must use a separate validation set, not the test set.** Picking a decision threshold using test-set labels — even just to compute the "optimal" F1 cutoff — leaks test information into the final evaluation. A held-out validation split (carved from training data) is used to select thresholds, keeping the test set fully untouched until final reporting.
+- **ROC-AUC, not accuracy or a fixed 0.5 cutoff, should drive model comparison during tuning.** Optuna objectives were switched from ROC-AUC to F1 scoring, since F1 directly reflects the precision/recall tradeoff relevant to identifying both churners and non-churners correctly — the business-relevant outcome, not just ranking quality.
+- **This dataset has a real ceiling around ROC-AUC ≈ 0.84.** Some customers share nearly identical profiles (same contract, tenure, charges, services) yet differ in outcome — the available features can't fully separate them. No amount of additional tuning closes this gap; doing so would require richer data (e.g. support interaction history, usage trends) not present in this dataset.
 
 ## Best Performing Model
 
